@@ -1,5 +1,5 @@
 # launching-a-scalable-application-in-aws-cloudformation
-Launching a Scalable Web Application on AWS: A Case Study by Iac- Cloud Formation
+Launching a Scalable Web Application on AWS: A Case Study by IaaC- Cloud Formation
 
 # XYZ Corporation: Scalable Web Application Deployment on AWS
 
@@ -31,7 +31,6 @@ Additionally, AWS Route 53 is configured to direct traffic to the EC2 instance i
 
 ## Prerequisites
 - AWS account with sufficient permissions to create the necessary resources.
-- AWS CLI installed and configured on your local machine.
 - A key pair for SSH access to EC2 instances.
 - Basic knowledge of AWS services (EC2, RDS, VPC, Route 53) and CloudFormation.
 
@@ -43,7 +42,8 @@ Additionally, AWS Route 53 is configured to direct traffic to the EC2 instance i
    - Public Subnet: 10.0.1.0/24
    - Private Subnet: 10.0.2.0/24
 3. Attach an Internet Gateway to the VPC.
-4. Configure route tables for public and private subnets.
+4. Create a NAT Gateway and attach to Route table of private subnet
+5. Configure route tables for public subnet.
 
 ### 2. Web Tier Configuration
 1. Launch an EC2 instance in the public subnet.
@@ -83,6 +83,4 @@ For any questions or further assistance, please contact:
 - *Email*: rizvanabegumt@outlook.com
 - *LinkedIn*: www.linkedin.com/in/rizvanabegum
 
----
 
-Feel free to customize this README file with more specific details about your project, such as specific CloudFormation template snippets, additional troubleshooting tips, or links to related documentation.
