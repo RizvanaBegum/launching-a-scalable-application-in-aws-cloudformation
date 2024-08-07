@@ -1,0 +1,256 @@
+Parameters:
+  myAvailabilityzone:
+    Type: String
+    Default: eu-north-1a
+Resources:
+  myVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.10.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Case Study
+          Value: Cloud Formation
+
+  myInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Case Study
+          Value: Cloud Formation
+
+  myInternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref myInternetGateway
+      VpcId: !Ref myVPC
+
+  #public subnet
+  publicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref myVPC
+      AvailabilityZone: !Ref myAvailabilityzone
+      CidrBlock: 10.10.0.0/17
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Case Study
+          Value: Cloud Formation
+
+  publicroutetable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref myVPC
+      Tags:
+        - Key: Case Study
+          Value: Cloud Formation
+
+  publicroutes:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref publicroutetable
+      GatewayId: !Ref myInternetGateway
+
+  publicsubnetAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref publicroutetable
+      SubnetId: !Ref publicSubnet
+  
+  #Private Subnet
+  privateSubnet:
+        Type: AWS::EC2::Subnet
+        Properties:
+          VpcId: !Ref myVPC
+          CidrBlock: 10.10.128.0/17
+          AvailabilityZone: !Select [ 1,!GetAZs ]        
+          MapPublicIpOnLaunch: false
+          Tags:
+            - Key: Case Study
+              Value: Cloud Formation
+
+  #NAT gateway
+  NATgateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt elasticip.AllocationId
+      SubnetId: !Ref privateSubnet
+      Tags: 
+            - Key: Case Study
+              Value: Cloud Formation
+
+  elasticip:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: VPC
+      Tags: 
+            - Key: Case Study
+              Value: Cloud Formation     
+
+  privateroutetable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref myVPC
+      Tags:
+        - Key: Case Study
+          Value: Cloud Formation
+
+  privateroutes:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref privateroutetable
+      NatGatewayId: !Ref NATgateway
+
+  privatesubnetAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref privateroutetable
+      SubnetId: !Ref privateSubnet
+
+  publicinstanceSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupDescription: allow ssh and http traffic
+        GroupName: publicInstanceSecurityGroup
+        SecurityGroupEgress: 
+            - IpProtocol: -1
+              CidrIp: 0.0.0.0/0
+        SecurityGroupIngress: 
+            -   CidrIp: 0.0.0.0/0
+                FromPort: 22
+                IpProtocol: tcp
+                ToPort: 22
+            -   CidrIp: 0.0.0.0/0
+                FromPort: 80
+                IpProtocol: tcp
+                ToPort: 80
+
+        Tags: 
+            - Key: Case Study
+              Value: Cloud Formation
+        VpcId: !Ref myVPC
+
+  privateinstanceSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupDescription: allow ssh from public subnet
+        GroupName: privateInstanceSecurityGroup
+        SecurityGroupEgress: 
+            - IpProtocol: -1
+              CidrIp: 0.0.0.0/0
+        SecurityGroupIngress: 
+            -   CidrIp: 10.10.0.0/17
+                FromPort: 22
+                IpProtocol: tcp
+                ToPort: 22
+                
+        Tags: 
+            - Key: Case Study
+              Value: Cloud Formation
+        VpcId: !Ref myVPC
+
+
+  dbinstanceSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupDescription: allow mysql from public subnet
+        GroupName: dbInstanceSecurityGroup
+        SecurityGroupEgress: 
+            - IpProtocol: -1
+              CidrIp: 0.0.0.0/0
+        SecurityGroupIngress: 
+            -   CidrIp: 10.10.128.0/17
+                FromPort: 3306
+                IpProtocol: tcp
+                ToPort: 3306
+                
+        Tags: 
+            - Key: Case Study
+              Value: Cloud Formation
+        VpcId: !Ref myVPC
+
+  apptierpublicec2instance:
+    Type: AWS::EC2::Instance
+    Properties:
+        AvailabilityZone: !Ref myAvailabilityzone
+        ImageId: ami-0b2777f4fd0d1712a
+        InstanceType: t3.micro
+        SecurityGroupIds: 
+          - !Ref publicinstanceSecGroup
+        SubnetId: !Ref publicSubnet
+        Tags:
+            - Key: Case Study
+              Value: Cloud Formation
+  
+  webtierprivateec2instance:
+    Type: AWS::EC2::Instance
+    Properties:
+        AvailabilityZone: !Select [ 1, !GetAZs ]
+        ImageId: ami-0b2777f4fd0d1712a
+        InstanceType: t3.micro
+        SecurityGroupIds: 
+          - !Ref privateinstanceSecGroup
+        SubnetId: !Ref privateSubnet
+        Tags:
+            - Key: Case Study
+              Value: Cloud Formation
+
+
+  dbSubnetGroup:
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties:
+        DBSubnetGroupDescription: "Subnet Group for mySQL database"
+        DBSubnetGroupName: subnet group case study
+        SubnetIds: 
+          - !Ref publicSubnet
+          - !Ref privateSubnet
+        Tags:
+            - Key: Case Study
+              Value: Cloud Formation
+
+  dbtierrdsinstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+        AllocatedStorage: 20
+        AllowMajorVersionUpgrade: true
+        AutoMinorVersionUpgrade: true 
+        AvailabilityZone: !Select [ 1, !GetAZs ]
+        BackupRetentionPeriod: 10
+        CopyTagsToSnapshot: false
+        DBInstanceClass: db.t3.micro
+        DBInstanceIdentifier: casestudyrdsdb
+        VPCSecurityGroups: 
+              - !Ref dbinstanceSecGroup 
+        DBSubnetGroupName: !Ref dbSubnetGroup
+        DeletionProtection: true
+        Engine: MYSQL
+        EngineVersion: 8.0.35
+        MasterUsername: admin
+        MasterUserPassword: HelloRizvana13
+        MultiAZ: false
+        Port: 3306
+        StorageType: gp2
+        StorageEncrypted: false
+        Tags:
+            - Key: Case Study
+              Value: Cloud Formation
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      HostedZoneConfig:
+        Comment: ''
+      Name: casestudycloudformation.ml
+
+  MyDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZone
+      Name: www.casestudycloudformation.ml.
+      Type: A
+      TTL: 300
+      ResourceRecords:
+      - !GetAtt apptierpublicec2instance.PublicIp
