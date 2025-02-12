@@ -1,4 +1,4 @@
-# launching-a-scalable-application-in-aws-cloudformation
+# Automated Deployment of Scalable Web Application on AWS
 Launching a Scalable Web Application on AWS: A Case Study by IaaC- Cloud Formation
 
 # XYZ Corporation: Scalable Web Application Deployment on AWS
